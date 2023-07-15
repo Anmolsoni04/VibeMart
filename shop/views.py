@@ -5,9 +5,6 @@ from django.shortcuts import render, redirect
 from django.contrib import messages
 import razorpay
 from django.conf import settings
-
-
-from scipy.spatial._ckdtree import ordered_pairs
 from .models import Product, Contact, Orders, OrderUpdate
 from math import ceil
 import json
