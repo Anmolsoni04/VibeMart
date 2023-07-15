@@ -1,0 +1,163 @@
+{% extends 'shop/basic.html' %}
+{% block title%} Checkout- Vibe Mart {% endblock %}
+{% block body %}
+<div class="container">
+    <div class="col my-4">
+        <h2>Step 1: Review Your Cart Items Here</h2>
+        <div class="my-4">
+            <ul class="list-group" id="items">
+            </ul>
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb mt-3">
+                    <li class="breadcrumb-item active" aria-current="page">Your Cart Total Is <b>Rs.<span id="totalPrice"></span></b>  Enter your details below & place your order. Thanks for using Vibe Mart!</li>
+            </ol>
+        </nav>
+        </div>
+    </div>
+    <div class="col my-4">
+        <h2>Step 2 - Enter Address & Other Details:</h2>
+        <form method = "post" action="/shop/checkout/">
+            {% csrf_token %}
+            <input type = "hidden" name = "itemsJson" id = "itemsJson">
+            <input type = "hidden" name = "amount" id = "amount">
+            <div class="form-row">
+                <div class="form-group col-md-6">
+                    <label for="name">Name</label>
+                    {% if name %}
+                    <input type="text" class="form-control" id="name" value="{{ name }}" name="name" placeholder="Name">
+                    {% else %}
+                    <input type="text" class="form-control" id="name" name="name" placeholder="Name">
+                    {% endif %}
+                </div>
+                <div class="form-group col-md-6">
+                    <label for="Email">Email</label>
+                    {% if email %}
+                    <input type="email" class="form-control" id="email" value="{{ email }}" name="email" placeholder="Email">
+                    {% else %}
+                    <input type="email" class="form-control" id="email" name="email" placeholder="Email">
+                    {% endif %}
+                </div>
+            </div>
+            <div class="form-group">
+                <label for="address1">Address</label>
+                {% if address %}
+                <input type="text" class="form-control" id="address1" name = "address1" value="{{ address }}">
+                {% else %}
+                <input type="text" class="form-control" id="address1" name = "address1" placeholder="1234 Main St">
+                {% endif %}
+            </div>
+            <div class="form-group">
+                <label for="Address2">Address line 2</label>
+                {% if add2 %}
+                <input type="text" class="form-control" id="address2" name = "address2" value="{{ add2 }}">
+                {% else %}
+                <input type="text" class="form-control" id="address2" name = "address2" placeholder="Apartment, studio, or floor">
+                {% endif %}
+            </div>
+            <div class="form-row">
+                <div class="form-group col-md-6">
+                    <label for="City">City</label>
+                    {% if city %}
+                    <input type="text" class="form-control" id="city" name = "city" value="{{ city }}">
+                    {% else %}
+                    <input type="text" class="form-control" id="city" name = "city">
+                    {% endif %}
+                </div>
+                <div class="form-group col-md-4">
+                    <label for="State">State</label>
+                    {% if state %}
+                    <input type="text" class="form-control" id="state" name="state" value="{{ state }}">
+                    {% else %}
+                    <input type="text" class="form-control" id="state" name="state" placeholder="Enter State">
+                    {% endif %}
+                </div>
+                <div class="form-group col-md-2">
+                    <label for="Zip">Zip</label>
+                    {% if zip %}
+                    <input type="text" class="form-control" id="zip" name = "zip" value="{{ zip }}">
+                    {% else %}
+                    <input type="text" class="form-control" id="zip" name = "zip">
+                    {% endif %}
+                </div>
+            </div>
+            <div class="form-group">
+                <label for="phone">Phone Number</label>
+                {% if phno %}
+                <input type="tel" class="form-control" id="phone" name="phone" value="{{ phno }}">
+                {% else %}
+                <input type="tel" class="form-control" id="phone" name="phone">
+                {% endif %}
+            </div>
+            {% if name %}
+            <button type="submit" class="btn btn-primary">Edit Details</button>
+            <a style="color: white;" onclick="completepayment()" class="btn btn-primary">Proceed to Pay</a>
+            {% else %}
+            <button type="submit" class="btn btn-primary">Submit Details</button>
+            {% endif %}
+        </form>
+        <form id="paymentsubmit" action="/shop/handlerequest/" method="post"> {% csrf_token %}
+            <input name="orderID" type="hidden" value="{{ payment.id }}">
+            <input name="amount" type="hidden" value="{{payment.amount}}">
+            <input name="payment_signature" id="payment_signature" type="hidden">
+            <input name="payment_id" id="payment_id" type="hidden">
+        </form>
+    </div>
+</div>
+{% endblock %}
+{% block js %}
+<script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+<script>
+if (localStorage.getItem('cart') == null) {
+    var cart = {};
+} else {
+    cart = JSON.parse(localStorage.getItem('cart'));
+}
+console.log(cart);
+let totalPrice = 0;
+let sum = 0;
+if ($.isEmptyObject(cart)) {
+    //if object is empty
+    mystr = `<p>Your cart is empty, please add some items to your cart before checking out!</p>`
+    $('#items').append(mystr);
+} else {
+    for (item in cart) {
+        let name = cart[item][1];
+        let qty = cart[item][0];
+        let itemPrice = cart[item][2];
+        sum = sum + qty;
+        totalPrice = totalPrice + (qty * itemPrice);
+        mystr = `<li class="list-group-item d-flex justify-content-between align-items-center">
+                    ${name}
+                    <span class="badge badge-primary badge-pill">${qty}</span>
+                </li>`
+        $('#items').append(mystr);
+    }
+}
+document.getElementById('cart').innerHTML = sum;
+document.getElementById('totalPrice').innerHTML = totalPrice;
+            function completepayment(){
+                var options = {
+                    key: "{{key}}",
+                    amount: "{{payment.amount}}",
+                    currency: "INR",
+                    name: "VibeMart",
+                    description: "Test Transaction",
+                    order_id: "{{payment.id}}",
+                    redirect: true,
+                    'handler':function(response){
+                        document.getElementById("payment_signature").setAttribute("value",response.razorpay_signature)
+                        document.getElementById("payment_id").setAttribute("value",response.razorpay_payment_id)
+                        document.getElementById("paymentsubmit").submit()
+                     },
+                    theme: {
+                        "color": "#3399cc"
+                    }
+                };
+                var rzp1 = new Razorpay(options);
+                rzp1.open();
+               }
+$('#itemsJson').val(JSON.stringify(cart));
+$('#amount').val($('#totalPrice').html())
+
+</script>
+{% endblock %}
